@@ -1,0 +1,90 @@
+@* One talent icon with its rank badge and hover tooltip. *@
+
+<div class="talent @StateClass"
+     style="left:@(Left)px; top:@(Top)px; width:@(Size)px; height:@(Size)px;"
+     @onclick="OnClick"
+     @oncontextmenu="() => Build.Remove(Talent)"
+     @oncontextmenu:preventDefault="true">
+
+    <div class="talent-icon" style="@IconStyle">
+        @if (string.IsNullOrEmpty(Talent.Icon))
+        {
+            <span class="talent-initials">@Initials</span>
+        }
+    </div>
+    <span class="talent-rank">@Rank/@Talent.MaxRank</span>
+
+    <div class="tooltip @(Talent.Col >= 2 ? "tooltip-left" : "tooltip-right")">
+        <div class="tooltip-name">@Talent.Name</div>
+        <div class="tooltip-rank">Rank @Rank/@Talent.MaxRank</div>
+
+        @if (!Build.IsRowUnlocked(Talent))
+        {
+            <div class="tooltip-req">Requires @Build.PointsNeededForRow(Talent.Row) points in @Tree.Name Talents</div>
+        }
+        @if (!Build.IsPrerequisiteMet(Talent))
+        {
+            var pre = Build.PrerequisiteOf(Talent)!;
+            var needed = Build.RequiredPrerequisiteRank(Talent);
+            <div class="tooltip-req">Requires @needed @(needed == 1 ? "point" : "points") in @pre.Name</div>
+        }
+
+        <div class="tooltip-desc">@TalentBuild.DescribeRank(Talent, Math.Max(Rank, 1))</div>
+
+        @if (Rank > 0 && Rank < Talent.MaxRank)
+        {
+            <div class="tooltip-next">Next rank:</div>
+            <div class="tooltip-desc">@TalentBuild.DescribeRank(Talent, Rank + 1)</div>
+        }
+
+        @if (Build.CanAdd(Talent))
+        {
+            <div class="tooltip-hint learn">Click to learn</div>
+        }
+        @if (Build.CanRemove(Talent))
+        {
+            <div class="tooltip-hint unlearn">Right-click (or shift-click) to unlearn</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TalentData Talent { get; set; } = default!;
+    [Parameter, EditorRequired] public TreeData Tree { get; set; } = default!;
+    [Parameter, EditorRequired] public TalentBuild Build { get; set; } = default!;
+    [Parameter] public int Left { get; set; }
+    [Parameter] public int Top { get; set; }
+    [Parameter] public int Size { get; set; } = 48;
+
+    private int Rank => Build.RankOf(Talent);
+
+    private string StateClass =>
+        Rank >= Talent.MaxRank ? "maxed"
+        : Build.CanAdd(Talent) ? "available"
+        : Rank > 0 ? "partial"
+        : "locked";
+
+    private string Initials =>
+        string.Concat(Talent.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 2 || w == Talent.Name).Select(w => w[0])).ToUpperInvariant() is { Length: > 0 } s
+            ? s[..Math.Min(3, s.Length)]
+            : Talent.Name[..1];
+
+    // Image if the data gives one, otherwise a colored tile derived from the talent name.
+    private string IconStyle
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(Talent.Icon))
+                return $"background-image:url('{Talent.Icon}');";
+            var hue = Math.Abs(Talent.Id.Aggregate(17, (h, c) => h * 31 + c)) % 360;
+            return $"background: linear-gradient(135deg, hsl({hue},45%,42%), hsl({(hue + 40) % 360},50%,18%));";
+        }
+    }
+
+    private void OnClick(MouseEventArgs e)
+    {
+        if (e.ShiftKey) Build.Remove(Talent);
+        else Build.Add(Talent);
+    }
+}

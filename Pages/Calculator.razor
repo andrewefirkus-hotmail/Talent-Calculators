@@ -1,0 +1,119 @@
+@page "/"
+@page "/{ClassSlug}"
+@implements IDisposable
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<PageTitle>@(Data?.Name ?? "Talent") Talent Calculator</PageTitle>
+
+<div class="calculator">
+    <header class="calc-header">
+        <h1>
+            <span style="color:@(Data?.Color ?? "inherit")">@(Data?.Name ?? "…")</span> Talent Calculator
+        </h1>
+        @if (Classes.Count > 1)
+        {
+            <nav class="class-picker">
+                @foreach (var c in Classes)
+                {
+                    <a href="@c.Slug" class="@(c.Slug == Slug ? "active" : "")">@c.Name</a>
+                }
+            </nav>
+        }
+    </header>
+
+    @if (Error is not null)
+    {
+        <p class="error">@Error</p>
+    }
+    else if (Build is null)
+    {
+        <p>Loading talents…</p>
+    }
+    else
+    {
+        <div class="summary">
+            <div><span class="label">Points spent</span> <b>@Build.PointsSpent</b> / @Build.Class.TotalPoints</div>
+            <div><span class="label">Remaining</span> <b>@Build.PointsRemaining</b></div>
+            <div><span class="label">Required level</span> <b>@(Build.RequiredLevel == 0 ? "–" : Build.RequiredLevel)</b></div>
+            <div class="split">@string.Join(" / ", Build.Class.Trees.Select(Build.PointsIn))</div>
+            <button class="reset-all" @onclick="Build.ResetAll" disabled="@(Build.PointsSpent == 0)">Reset all</button>
+        </div>
+
+        <div class="trees">
+            @foreach (var tree in Build.Class.Trees)
+            {
+                <TalentTree Tree="tree" Build="Build" />
+            }
+        </div>
+
+        <p class="help">
+            Click a talent to add a point. Right-click or shift-click to remove one.
+            The address bar keeps your build, so you can bookmark or share it.
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter] public string? ClassSlug { get; set; }
+    [SupplyParameterFromQuery(Name = "build")] public string? BuildCode { get; set; }
+
+    private record ClassEntry(string Slug, string Name);
+
+    private List<ClassEntry> Classes = new();
+    private ClassData? Data;
+    private TalentBuild? Build;
+    private string? LoadedSlug;
+    private string? Error;
+
+    private string Slug => string.IsNullOrEmpty(ClassSlug) ? "rogue" : ClassSlug.ToLowerInvariant();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Classes = await Http.GetFromJsonAsync<List<ClassEntry>>("data/classes.json") ?? new();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Slug != LoadedSlug)
+        {
+            LoadedSlug = Slug;
+            Error = null;
+            if (Build is not null) Build.Changed -= OnBuildChanged;
+            Build = null;
+            try
+            {
+                Data = await Http.GetFromJsonAsync<ClassData>($"data/{Slug}.json");
+                Build = new TalentBuild(Data!);
+            }
+            catch (Exception ex)
+            {
+                Error = $"Couldn't load data/{Slug}.json: {ex.Message}";
+                return;
+            }
+            Build.LoadCode(BuildCode);
+            Build.Changed += OnBuildChanged;
+            if ((BuildCode ?? "") != Build.ToCode()) OnBuildChanged(); // drop points the rules rejected
+        }
+        else if (Build is not null && (BuildCode ?? "") != Build.ToCode())
+        {
+            // Back/forward navigation or a pasted link.
+            Build.Changed -= OnBuildChanged;
+            Build.LoadCode(BuildCode);
+            Build.Changed += OnBuildChanged;
+            if ((BuildCode ?? "") != Build.ToCode()) OnBuildChanged();
+        }
+    }
+
+    private void OnBuildChanged()
+    {
+        var code = Build!.ToCode();
+        Nav.NavigateTo(Nav.GetUriWithQueryParameter("build", code.Length == 0 ? null : code), replace: true);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        if (Build is not null) Build.Changed -= OnBuildChanged;
+    }
+}

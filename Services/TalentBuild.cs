@@ -37,7 +37,9 @@ public class TalentBuild
     public int PointsSpent => _ranks.Values.Sum();
     public int PointsRemaining => Class.TotalPoints - PointsSpent;
     public int PointsIn(TreeData tree) => tree.Talents.Sum(RankOf);
-    public int RequiredLevel => PointsSpent == 0 ? 0 : Class.FirstTalentLevel - 1 + PointsSpent;
+    public int RequiredLevel =>
+        PointsSpent == 0 ? 0
+        : Class.FirstTalentLevel - 1 + PointsSpent;
     public int PointsNeededForRow(int row) => row * Class.PointsPerRow;
 
     public TalentData? Find(string id) => _byId.GetValueOrDefault(id);
@@ -49,7 +51,8 @@ public class TalentBuild
     public int RequiredPrerequisiteRank(TalentData talent)
     {
         var pre = PrerequisiteOf(talent);
-        return pre is null ? 0 : talent.Requires!.Rank ?? pre.MaxRank;
+        return pre is null ? 0
+            : talent.Requires!.Rank ?? pre.MaxRank;
     }
 
     public bool IsRowUnlocked(TalentData talent) =>
@@ -80,12 +83,16 @@ public class TalentBuild
 
         // Every row that has points must still be unlocked by the points spent in the rows above it.
         var tree = TreeOf(talent);
-        var deepestRow = tree.Talents.Where(t => RankOf(t) > 0).Max(t => t.Row);
+        var deepestRow = tree.Talents
+            .Where(treeTalent => RankOf(treeTalent) > 0)
+            .Max(treeTalent => treeTalent.Row);
         for (var row = talent.Row + 1; row <= deepestRow; row++)
         {
-            if (!tree.Talents.Any(t => t.Row == row && RankOf(t) > 0)) continue;
-            var above = tree.Talents.Where(t => t.Row < row).Sum(RankOf) - 1;
-            if (above < PointsNeededForRow(row)) return false;
+            if (!tree.Talents.Any(treeTalent => treeTalent.Row == row && RankOf(treeTalent) > 0)) continue;
+            var pointsAboveAfterRemoval = tree.Talents
+                .Where(treeTalent => treeTalent.Row < row)
+                .Sum(RankOf) - 1;
+            if (pointsAboveAfterRemoval < PointsNeededForRow(row)) return false;
         }
         return true;
     }
@@ -112,7 +119,7 @@ public class TalentBuild
     public void Reset(TreeData tree)
     {
         foreach (var talent in tree.Talents) _ranks.Remove(talent);
-        _order.RemoveAll(t => TreeOf(t) == tree);
+        _order.RemoveAll(learnedTalent => TreeOf(learnedTalent) == tree);
         Changed?.Invoke();
     }
 
@@ -133,18 +140,27 @@ public class TalentBuild
     /// </summary>
     public string ToCode()
     {
-        var build = string.Join("-", Class.Trees.Select(tree =>
-            new string(tree.Talents.Select(t => (char)('0' + RankOf(t))).ToArray()).TrimEnd('0'))).TrimEnd('-');
-        return build.Length == 0 ? "" : build + "_" + OrderCode();
+        var treeCodes = Class.Trees.Select(tree =>
+        {
+            var rankDigits = tree.Talents
+                .Select(talent => (char)('0' + RankOf(talent)))
+                .ToArray();
+            return new string(rankDigits)
+                .TrimEnd('0');
+        });
+        var build = string.Join("-", treeCodes)
+            .TrimEnd('-');
+        return build.Length == 0 ? ""
+            : build + "_" + OrderCode();
     }
 
     private string OrderCode()
     {
         var code = new System.Text.StringBuilder();
         TreeData? currentTree = null;
-        for (var i = 0; i < _order.Count; i++)
+        for (var orderIndex = 0; orderIndex < _order.Count; orderIndex++)
         {
-            var talent = _order[i];
+            var talent = _order[orderIndex];
             var tree = TreeOf(talent);
             if (tree != currentTree)
             {
@@ -154,13 +170,15 @@ public class TalentBuild
             var letter = (char)('a' + tree.Talents.IndexOf(talent));
 
             // A run of picks that takes the talent from 0 to max becomes one capital letter.
-            var isFirstRank = _order.Take(i).All(t => t != talent);
-            var run = 1;
-            while (i + run < _order.Count && _order[i + run] == talent) run++;
-            if (isFirstRank && talent.MaxRank > 1 && run == talent.MaxRank)
+            var isFirstRank = _order
+                .Take(orderIndex)
+                .All(earlierTalent => earlierTalent != talent);
+            var runLength = 1;
+            while (orderIndex + runLength < _order.Count && _order[orderIndex + runLength] == talent) runLength++;
+            if (isFirstRank && talent.MaxRank > 1 && runLength == talent.MaxRank)
             {
                 code.Append(char.ToUpperInvariant(letter));
-                i += run - 1;
+                orderIndex += runLength - 1;
             }
             else
             {
@@ -180,16 +198,26 @@ public class TalentBuild
         _order.Clear();
         if (!string.IsNullOrWhiteSpace(code))
         {
-            var split = code.Split('_', 2);
-            var wanted = ParseBuild(split[0]);
-            if (split.Length < 2 || !ReplayOrder(split[1]) || !Class.Trees.SelectMany(t => t.Talents).All(t => RankOf(t) == wanted.GetValueOrDefault(t)))
+            var sections = code.Split('_', 2);
+            var wanted = ParseBuild(sections[0]);
+            var hasOrder = sections.Length == 2;
+            var orderMatchesBuild = hasOrder && ReplayOrder(sections[1]) &&
+                Class.Trees
+                    .SelectMany(tree => tree.Talents)
+                    .All(talent => RankOf(talent) == wanted.GetValueOrDefault(talent));
+            if (!orderMatchesBuild)
             {
                 _ranks.Clear();
                 _order.Clear();
                 foreach (var tree in Class.Trees)
-                    foreach (var talent in tree.Talents.OrderBy(t => t.Row).ThenBy(t => t.Col))
-                        for (var r = 0; r < wanted.GetValueOrDefault(talent); r++)
+                {
+                    var topRowFirst = tree.Talents
+                        .OrderBy(candidate => candidate.Row)
+                        .ThenBy(candidate => candidate.Col);
+                    foreach (var talent in topRowFirst)
+                        for (var point = 0; point < wanted.GetValueOrDefault(talent); point++)
                             if (!Learn(talent)) break;
+                }
             }
         }
         Changed?.Invoke();
@@ -199,11 +227,12 @@ public class TalentBuild
     {
         var wanted = new Dictionary<TalentData, int>();
         var parts = build.Split('-');
-        for (var i = 0; i < parts.Length && i < Class.Trees.Count; i++)
+        for (var treeIndex = 0; treeIndex < parts.Length && treeIndex < Class.Trees.Count; treeIndex++)
         {
-            var talents = Class.Trees[i].Talents;
-            for (var j = 0; j < parts[i].Length && j < talents.Count; j++)
-                if (char.IsDigit(parts[i][j])) wanted[talents[j]] = parts[i][j] - '0';
+            var talents = Class.Trees[treeIndex].Talents;
+            var digits = parts[treeIndex];
+            for (var talentIndex = 0; talentIndex < digits.Length && talentIndex < talents.Count; talentIndex++)
+                if (char.IsDigit(digits[talentIndex])) wanted[talents[talentIndex]] = digits[talentIndex] - '0';
         }
         return wanted;
     }
@@ -211,20 +240,22 @@ public class TalentBuild
     private bool ReplayOrder(string order)
     {
         TreeData? tree = null;
-        foreach (var c in order)
+        foreach (var symbol in order)
         {
-            if (char.IsDigit(c))
+            if (char.IsDigit(symbol))
             {
-                var index = c - '0';
-                if (index >= Class.Trees.Count) return false;
-                tree = Class.Trees[index];
+                var treeIndex = symbol - '0';
+                if (treeIndex >= Class.Trees.Count) return false;
+                tree = Class.Trees[treeIndex];
                 continue;
             }
-            var talentIndex = char.ToLowerInvariant(c) - 'a';
+            var talentIndex = char.ToLowerInvariant(symbol) - 'a';
             if (tree is null || talentIndex < 0 || talentIndex >= tree.Talents.Count) return false;
             var talent = tree.Talents[talentIndex];
-            var times = char.IsUpper(c) ? talent.MaxRank : 1;
-            for (var r = 0; r < times; r++)
+            var pointsToLearn =
+                char.IsUpper(symbol) ? talent.MaxRank
+                : 1;
+            for (var point = 0; point < pointsToLearn; point++)
                 if (!Learn(talent)) return false;
         }
         return true;
@@ -251,10 +282,10 @@ public class TalentBuild
         _order.Clear();
         while (remaining.Count > 0)
         {
-            var next = remaining.FindIndex(CanAdd);
-            if (next < 0) break; // can't happen for a valid build, but never loop forever
-            Learn(remaining[next]);
-            remaining.RemoveAt(next);
+            var nextIndex = remaining.FindIndex(CanAdd);
+            if (nextIndex < 0) break; // can't happen for a valid build, but never loop forever
+            Learn(remaining[nextIndex]);
+            remaining.RemoveAt(nextIndex);
         }
     }
 
@@ -262,9 +293,9 @@ public class TalentBuild
     /// Resolves {a|b|c} placeholders in a description for the given rank (1-based).
     /// </summary>
     public static string DescribeRank(TalentData talent, int rank) =>
-        Regex.Replace(talent.Description, @"\{([^{}]*)\}", m =>
+        Regex.Replace(talent.Description, @"\{([^{}]*)\}", placeholder =>
         {
-            var values = m.Groups[1].Value.Split('|');
+            var values = placeholder.Groups[1].Value.Split('|');
             return values[Math.Clamp(rank - 1, 0, values.Length - 1)];
         });
 }

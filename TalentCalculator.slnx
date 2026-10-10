@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../TalentCalculator.Launcher/TalentCalculator.Launcher.csproj" />
+  <Project Path="TalentCalculator.csproj" />
+</Solution>

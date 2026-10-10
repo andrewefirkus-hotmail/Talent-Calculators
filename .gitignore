@@ -7,3 +7,4 @@ obj/
 wwwroot/css/
 *.razor.css
 *.css.map
+/Properties/PublishProfiles/FolderProfile.pubxml

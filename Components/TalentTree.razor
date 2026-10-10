@@ -41,12 +41,3 @@
         <span class="x">✕</span> Reset
     </button>
 </div>
-
-@code {
-    [Parameter, EditorRequired] public TreeData Tree { get; set; } = default!;
-    [Parameter, EditorRequired] public TalentBuild Build { get; set; } = default!;
-
-    private int Rows => Tree.Talents.Count == 0 ? 1 : Tree.Talents.Max(t => t.Row) + 1;
-
-    private string HeaderIconStyle => string.IsNullOrEmpty(Tree.Icon) ? "" : $"background-image:url('{Tree.Icon}')";
-}

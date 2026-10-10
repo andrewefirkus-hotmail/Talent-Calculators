@@ -1,7 +1,7 @@
 @* One talent icon with its rank badge and hover tooltip. *@
 
 <div class="talent @StateClass"
-     style="left:@(Left)px; top:@(Top)px; width:@(Size)px; height:@(Size)px;"
+     style="--row:@Talent.Row; --col:@Talent.Col;"
      @onclick="OnClick"
      @oncontextmenu="() => Build.Remove(Talent)"
      @oncontextmenu:preventDefault="true">
@@ -52,9 +52,6 @@
     [Parameter, EditorRequired] public TalentData Talent { get; set; } = default!;
     [Parameter, EditorRequired] public TreeData Tree { get; set; } = default!;
     [Parameter, EditorRequired] public TalentBuild Build { get; set; } = default!;
-    [Parameter] public int Left { get; set; }
-    [Parameter] public int Top { get; set; }
-    [Parameter] public int Size { get; set; } = 48;
 
     private int Rank => Build.RankOf(Talent);
 

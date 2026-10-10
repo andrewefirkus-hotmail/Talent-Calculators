@@ -29,10 +29,12 @@ Then open the URL it prints (http://localhost:5074 by default). `dotnet watch` g
 | `wwwroot/icons/` | Put talent icons here and reference them with `"icon": "icons/name.jpg"`. |
 | `Models/TalentModels.cs` | Shapes of the JSON data. |
 | `Services/TalentBuild.cs` | All the rules (point cap, row unlocking, prerequisites, safe removal, build code). No UI code. |
-| `Components/TalentTree.razor` | One tree: header, grid, prerequisite arrows, reset button. Layout sizes are constants at the bottom. |
+| `Components/TalentTree.razor` | One tree: header, grid, prerequisite arrows, reset button. |
 | `Components/TalentNode.razor` | One talent icon with its rank badge and tooltip. |
 | `Pages/Calculator.razor` | The page: loads the data, shows the summary bar and the three trees. |
-| `wwwroot/css/app.css` | All styling (bottom half of the file). |
+| `Styles/_variables.scss` | Shared colors and sizes (icon size, spacing, arrow size). Change the layout here. |
+| `Styles/app.scss` | Global styles. Compiled to `wwwroot/css/app.css` on build. |
+| `Components/*.razor.scss`, `Pages/*.razor.scss` | Each component's own styles, scoped to that component by Blazor. |
 
 ## Talent data format
 

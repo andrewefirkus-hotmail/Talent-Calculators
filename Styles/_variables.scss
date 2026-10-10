@@ -1,0 +1,28 @@
+// Shared colors and sizes. Every stylesheet imports this with: @import "../Styles/variables";
+
+// Colors
+$bg: #121212;
+$panel: #1d1d1f;
+$panel-2: #2a2a2d;
+$panel-hover: #36363a;
+$border: #3a3a3e;
+$text: #e6e6e6;
+$muted: #9a9a9a;
+$green: #40bf40;
+$gold: #ffd100;
+$red: #ff4040;
+$tooltip-bg: rgba(8, 12, 30, 0.96);
+$tooltip-border: #5a5a7a;
+$arrow-off: #6f6f6f;
+
+// Talent grid layout. Talent positions and prerequisite arrows are all computed from these.
+$columns: 4;
+$icon-size: 46px;    // talent icon width and height
+$pitch: 70px;        // distance between neighbouring talents
+$grid-padding: 24px; // space around the grid inside the tree background
+$arrow-width: 5px;
+$arrow-head: 8px;    // half-width of the arrow head; its length is 1.5x this
+$arrow-gap: 4px;     // space between an arrow tip and the icon it points at
+
+// Breakpoints
+$phone: 420px;

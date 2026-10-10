@@ -37,7 +37,7 @@
             <div><span class="label">Remaining</span> <b>@Build.PointsRemaining</b></div>
             <div><span class="label">Required level</span> <b>@(Build.RequiredLevel == 0 ? "–" : Build.RequiredLevel)</b></div>
             <div class="split">@string.Join(" / ", Build.Class.Trees.Select(Build.PointsIn))</div>
-            <button class="reset-all" @onclick="Build.ResetAll" disabled="@(Build.PointsSpent == 0)">Reset all</button>
+            <button class="button reset-all" @onclick="Build.ResetAll" disabled="@(Build.PointsSpent == 0)">Reset all</button>
         </div>
 
         <div class="trees">

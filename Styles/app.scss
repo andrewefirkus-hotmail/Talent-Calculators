@@ -1,0 +1,26 @@
+// Global styles. Component styles live next to each component (e.g. Components/TalentNode.razor.scss)
+// and are scoped to it by Blazor, so class names there can't clash.
+
+@import "variables";
+@import "blazor";
+
+html, body {
+    margin: 0;
+    background: $bg;
+    color: $text;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+// Shared button look (summary "Reset all" and each tree's "Reset").
+.button {
+    background: $panel-2;
+    color: $text;
+    border: 1px solid $border;
+    border-radius: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font: inherit;
+
+    &:hover:not(:disabled) { background: $panel-hover; }
+    &:disabled { opacity: 0.45; cursor: default; }
+}

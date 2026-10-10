@@ -1,4 +1,5 @@
-@* One talent tree: header, grid of talents with prerequisite arrows, and reset button. *@
+@* One talent tree: header, grid of talents with prerequisite arrows, and reset button.
+   Sizes and positions come from Styles/_variables.scss; this file only passes rows and columns. *@
 
 <div class="tree">
     <div class="tree-header">
@@ -7,34 +8,36 @@
         <span class="tree-points">@Build.PointsIn(Tree) / @Build.Class.TotalPoints</span>
     </div>
 
-    <div class="tree-grid" style="width:@(GridWidth)px; height:@(GridHeight)px; background:@(Tree.Background ?? "#1b1b1b");">
-        <svg class="tree-arrows" width="@GridWidth" height="@GridHeight">
-            <defs>
-                <marker id="arrow-@TreeKey-on" markerWidth="3" markerHeight="3" refX="2.4" refY="1.5" orient="auto" markerUnits="strokeWidth">
-                    <path d="M0,0 L3,1.5 L0,3 z" class="arrow-head on" />
-                </marker>
-                <marker id="arrow-@TreeKey-off" markerWidth="3" markerHeight="3" refX="2.4" refY="1.5" orient="auto" markerUnits="strokeWidth">
-                    <path d="M0,0 L3,1.5 L0,3 z" class="arrow-head" />
-                </marker>
-            </defs>
-            @foreach (var talent in Tree.Talents)
+    <div class="tree-grid" style="--rows:@Rows; background:@(Tree.Background ?? "#1b1b1b");">
+        @foreach (var talent in Tree.Talents)
+        {
+            var pre = Build.PrerequisiteOf(talent);
+            if (pre is null) continue;
+            var on = Build.IsPrerequisiteMet(talent) ? "on" : "";
+            var position = $"--from-row:{pre.Row}; --from-col:{pre.Col}; --to-row:{talent.Row}; --to-col:{talent.Col};";
+
+            if (pre.Col == talent.Col)
             {
-                var pre = Build.PrerequisiteOf(talent);
-                if (pre is null) continue;
-                var on = Build.IsPrerequisiteMet(talent);
-                <path d="@ArrowPath(pre, talent)" class="arrow @(on ? "on" : "")"
-                      marker-end="url(#arrow-@TreeKey-@(on ? "on" : "off"))" />
+                <div class="arrow down @on" style="@position"></div>
             }
-        </svg>
+            else if (pre.Row == talent.Row)
+            {
+                <div class="arrow @(talent.Col > pre.Col ? "right" : "left") @on" style="@position"></div>
+            }
+            else
+            {
+                <div class="arrow @(talent.Col > pre.Col ? "across-right" : "across-left") @on" style="@position"></div>
+                <div class="arrow down corner @on" style="@position"></div>
+            }
+        }
 
         @foreach (var talent in Tree.Talents)
         {
-            <TalentNode Talent="talent" Tree="Tree" Build="Build"
-                        Left="X(talent.Col)" Top="Y(talent.Row)" Size="IconSize" />
+            <TalentNode Talent="talent" Tree="Tree" Build="Build" />
         }
     </div>
 
-    <button class="tree-reset" @onclick="() => Build.Reset(Tree)" disabled="@(Build.PointsIn(Tree) == 0)">
+    <button class="button tree-reset" @onclick="() => Build.Reset(Tree)" disabled="@(Build.PointsIn(Tree) == 0)">
         <span class="x">✕</span> Reset
     </button>
 </div>
@@ -43,37 +46,7 @@
     [Parameter, EditorRequired] public TreeData Tree { get; set; } = default!;
     [Parameter, EditorRequired] public TalentBuild Build { get; set; } = default!;
 
-    // Layout: change these to resize the grid.
-    private const int Columns = 4;
-    private const int Pitch = 70;     // distance between neighbouring talents
-    private const int IconSize = 46;
-    private const int Padding = 24;
-
     private int Rows => Tree.Talents.Count == 0 ? 1 : Tree.Talents.Max(t => t.Row) + 1;
-    private int GridWidth => Padding * 2 + (Columns - 1) * Pitch + IconSize;
-    private int GridHeight => Padding * 2 + (Rows - 1) * Pitch + IconSize;
-    private int X(int col) => Padding + col * Pitch;
-    private int Y(int row) => Padding + row * Pitch;
-    private string TreeKey => new string(Tree.Name.Where(char.IsLetterOrDigit).ToArray());
 
     private string HeaderIconStyle => string.IsNullOrEmpty(Tree.Icon) ? "" : $"background-image:url('{Tree.Icon}')";
-
-    // Straight down, straight across, or across-then-down for prerequisites in another column.
-    private string ArrowPath(TalentData from, TalentData to)
-    {
-        const int gap = 4; // space between the arrow tip and the icon
-        int half = IconSize / 2;
-        int fx = X(from.Col) + half, fy = Y(from.Row) + half;
-        int tx = X(to.Col) + half, ty = Y(to.Row) + half;
-
-        if (from.Col == to.Col)
-            return $"M{fx},{fy + half} L{tx},{ty - half - gap}";
-        if (from.Row == to.Row)
-        {
-            var dir = Math.Sign(tx - fx);
-            return $"M{fx + dir * half},{fy} L{tx - dir * (half + gap)},{ty}";
-        }
-        var side = Math.Sign(tx - fx);
-        return $"M{fx + side * half},{fy} L{tx},{fy} L{tx},{ty - half - gap}";
-    }
 }

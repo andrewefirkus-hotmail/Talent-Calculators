@@ -2,3 +2,8 @@ bin/
 obj/
 .vs/
 *.user
+
+# Generated from .scss on build
+wwwroot/css/
+*.razor.css
+*.css.map

@@ -1,3 +1,11 @@
 [
-  { "slug": "rogue", "name": "Rogue" }
+  { "slug": "warrior", "name": "Warrior" },
+  { "slug": "paladin", "name": "Paladin" },
+  { "slug": "hunter", "name": "Hunter" },
+  { "slug": "rogue", "name": "Rogue" },
+  { "slug": "priest", "name": "Priest" },
+  { "slug": "shaman", "name": "Shaman" },
+  { "slug": "mage", "name": "Mage" },
+  { "slug": "warlock", "name": "Warlock" },
+  { "slug": "druid", "name": "Druid" }
 ]

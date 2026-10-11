@@ -36,7 +36,9 @@ public partial class TalentNode
                                        .ToUpperInvariant();
 
             if (initials.Length == 0)
+            {
                 return Talent.Name[..1];
+            }
             return initials[..Math.Min(3, initials.Length)];
         }
     }
@@ -47,7 +49,9 @@ public partial class TalentNode
         get
         {
             if (!string.IsNullOrEmpty(Talent.Icon))
+            {
                 return $"background-image:url('{Talent.Icon}');";
+            }
             // A simple hash of the id, so each talent always gets the same color.
             var hash = Talent.Id.Aggregate(17, (runningHash, character) => runningHash * 31 + character);
             var hue = Math.Abs(hash) % 360;
@@ -57,7 +61,13 @@ public partial class TalentNode
 
     private void OnClick(MouseEventArgs mouseEvent)
     {
-        if (mouseEvent.ShiftKey) Build.Remove(Talent);
-        else Build.Add(Talent);
+        if (mouseEvent.ShiftKey)
+        {
+            Build.Remove(Talent);
+        }
+        else
+        {
+            Build.Add(Talent);
+        }
     }
 }

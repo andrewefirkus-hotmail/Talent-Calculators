@@ -39,23 +39,42 @@ public partial class Calculator : IDisposable
     {
         if (Slug != LoadedSlug)
         {
-            LoadedSlug = Slug;
-            Error = null;
-            if (Build is not null) Build.Changed -= OnBuildChanged;
-            Build = null;
+            // Load the new class first and only then swap it in, so the current class stays on screen meanwhile.
+            var slugToLoad = Slug;
+            LoadedSlug = slugToLoad;
+            ClassData? newData;
             try
             {
-                Data = await Http.GetFromJsonAsync<ClassData>($"data/{Slug}.json");
-                Build = new TalentBuild(Data!);
+                newData = await Http.GetFromJsonAsync<ClassData>($"data/{slugToLoad}.json");
             }
             catch (Exception ex)
             {
-                Error = $"Couldn't load data/{Slug}.json: {ex.Message}";
+                if (slugToLoad != LoadedSlug)
+                {
+                    return;
+                }
+                Error = $"Couldn't load data/{slugToLoad}.json: {ex.Message}";
                 return;
             }
-            Build.LoadCode(BuildCode);
+            if (slugToLoad != LoadedSlug)
+            {
+                return; // another class was picked while this one loaded
+            }
+
+            var newBuild = new TalentBuild(newData!);
+            newBuild.LoadCode(BuildCode);
+            if (Build is not null)
+            {
+                Build.Changed -= OnBuildChanged;
+            }
+            Error = null;
+            Data = newData;
+            Build = newBuild;
             Build.Changed += OnBuildChanged;
-            if ((BuildCode ?? "") != Build.ToCode()) OnBuildChanged(); // drop points the rules rejected
+            if ((BuildCode ?? "") != Build.ToCode())
+            {
+                OnBuildChanged(); // drop points the rules rejected
+            }
         }
         else if (Build is not null && (BuildCode ?? "") != Build.ToCode())
         {
@@ -63,7 +82,10 @@ public partial class Calculator : IDisposable
             Build.Changed -= OnBuildChanged;
             Build.LoadCode(BuildCode);
             Build.Changed += OnBuildChanged;
-            if ((BuildCode ?? "") != Build.ToCode()) OnBuildChanged();
+            if ((BuildCode ?? "") != Build.ToCode())
+            {
+                OnBuildChanged();
+            }
         }
     }
 
@@ -77,6 +99,9 @@ public partial class Calculator : IDisposable
 
     public void Dispose()
     {
-        if (Build is not null) Build.Changed -= OnBuildChanged;
+        if (Build is not null)
+        {
+            Build.Changed -= OnBuildChanged;
+        }
     }
 }

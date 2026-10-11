@@ -23,11 +23,13 @@ public class TalentBuild
         Class = classData;
         _byId = new();
         foreach (var tree in classData.Trees)
+        {
             foreach (var talent in tree.Talents)
             {
                 _byId[talent.Id] = talent;
                 _treeOf[talent] = tree;
             }
+        }
     }
 
     public int RankOf(TalentData talent) => _ranks.GetValueOrDefault(talent);
@@ -74,12 +76,19 @@ public class TalentBuild
     public bool CanRemove(TalentData talent)
     {
         var rank = RankOf(talent);
-        if (rank == 0) return false;
+        if (rank == 0)
+        {
+            return false;
+        }
 
         // A talent that something else depends on can't drop below the required rank.
         foreach (var other in TreeOf(talent).Talents)
+        {
             if (RankOf(other) > 0 && PrerequisiteOf(other) == talent && rank - 1 < RequiredPrerequisiteRank(other))
+            {
                 return false;
+            }
+        }
 
         // Every row that has points must still be unlocked by the points spent in the rows above it.
         var tree = TreeOf(talent);
@@ -88,18 +97,27 @@ public class TalentBuild
             .Max(treeTalent => treeTalent.Row);
         for (var row = talent.Row + 1; row <= deepestRow; row++)
         {
-            if (!tree.Talents.Any(treeTalent => treeTalent.Row == row && RankOf(treeTalent) > 0)) continue;
+            if (!tree.Talents.Any(treeTalent => treeTalent.Row == row && RankOf(treeTalent) > 0))
+            {
+                continue;
+            }
             var pointsAboveAfterRemoval = tree.Talents
                 .Where(treeTalent => treeTalent.Row < row)
                 .Sum(RankOf) - 1;
-            if (pointsAboveAfterRemoval < PointsNeededForRow(row)) return false;
+            if (pointsAboveAfterRemoval < PointsNeededForRow(row))
+            {
+                return false;
+            }
         }
         return true;
     }
 
     public bool Add(TalentData talent)
     {
-        if (!CanAdd(talent)) return false;
+        if (!CanAdd(talent))
+        {
+            return false;
+        }
         _ranks[talent] = RankOf(talent) + 1;
         _order.Add(talent);
         Changed?.Invoke();
@@ -108,7 +126,10 @@ public class TalentBuild
 
     public bool Remove(TalentData talent)
     {
-        if (!CanRemove(talent)) return false;
+        if (!CanRemove(talent))
+        {
+            return false;
+        }
         _ranks[talent] = RankOf(talent) - 1;
         _order.RemoveAt(_order.LastIndexOf(talent));
         RepairOrder();
@@ -118,7 +139,10 @@ public class TalentBuild
 
     public void Reset(TreeData tree)
     {
-        foreach (var talent in tree.Talents) _ranks.Remove(talent);
+        foreach (var talent in tree.Talents)
+        {
+            _ranks.Remove(talent);
+        }
         _order.RemoveAll(learnedTalent => TreeOf(learnedTalent) == tree);
         Changed?.Invoke();
     }
@@ -174,7 +198,10 @@ public class TalentBuild
                 .Take(orderIndex)
                 .All(earlierTalent => earlierTalent != talent);
             var runLength = 1;
-            while (orderIndex + runLength < _order.Count && _order[orderIndex + runLength] == talent) runLength++;
+            while (orderIndex + runLength < _order.Count && _order[orderIndex + runLength] == talent)
+            {
+                runLength++;
+            }
             if (isFirstRank && talent.MaxRank > 1 && runLength == talent.MaxRank)
             {
                 code.Append(char.ToUpperInvariant(letter));
@@ -215,8 +242,15 @@ public class TalentBuild
                         .OrderBy(candidate => candidate.Row)
                         .ThenBy(candidate => candidate.Col);
                     foreach (var talent in topRowFirst)
+                    {
                         for (var point = 0; point < wanted.GetValueOrDefault(talent); point++)
-                            if (!Learn(talent)) break;
+                        {
+                            if (!Learn(talent))
+                            {
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -232,7 +266,12 @@ public class TalentBuild
             var talents = Class.Trees[treeIndex].Talents;
             var digits = parts[treeIndex];
             for (var talentIndex = 0; talentIndex < digits.Length && talentIndex < talents.Count; talentIndex++)
-                if (char.IsDigit(digits[talentIndex])) wanted[talents[talentIndex]] = digits[talentIndex] - '0';
+            {
+                if (char.IsDigit(digits[talentIndex]))
+                {
+                    wanted[talents[talentIndex]] = digits[talentIndex] - '0';
+                }
+            }
         }
         return wanted;
     }
@@ -245,18 +284,29 @@ public class TalentBuild
             if (char.IsDigit(symbol))
             {
                 var treeIndex = symbol - '0';
-                if (treeIndex >= Class.Trees.Count) return false;
+                if (treeIndex >= Class.Trees.Count)
+                {
+                    return false;
+                }
                 tree = Class.Trees[treeIndex];
                 continue;
             }
             var talentIndex = char.ToLowerInvariant(symbol) - 'a';
-            if (tree is null || talentIndex < 0 || talentIndex >= tree.Talents.Count) return false;
+            if (tree is null || talentIndex < 0 || talentIndex >= tree.Talents.Count)
+            {
+                return false;
+            }
             var talent = tree.Talents[talentIndex];
             var pointsToLearn =
                 char.IsUpper(symbol) ? talent.MaxRank
                 : 1;
             for (var point = 0; point < pointsToLearn; point++)
-                if (!Learn(talent)) return false;
+            {
+                if (!Learn(talent))
+                {
+                    return false;
+                }
+            }
         }
         return true;
     }
@@ -264,7 +314,10 @@ public class TalentBuild
     // Adds a point without raising Changed (used while loading).
     private bool Learn(TalentData talent)
     {
-        if (!CanAdd(talent)) return false;
+        if (!CanAdd(talent))
+        {
+            return false;
+        }
         _ranks[talent] = RankOf(talent) + 1;
         _order.Add(talent);
         return true;
@@ -283,7 +336,10 @@ public class TalentBuild
         while (remaining.Count > 0)
         {
             var nextIndex = remaining.FindIndex(CanAdd);
-            if (nextIndex < 0) break; // can't happen for a valid build, but never loop forever
+            if (nextIndex < 0)
+            {
+                break; // can't happen for a valid build, but never loop forever
+            }
             Learn(remaining[nextIndex]);
             remaining.RemoveAt(nextIndex);
         }

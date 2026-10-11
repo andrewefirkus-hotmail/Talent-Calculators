@@ -23,11 +23,7 @@
     {
         <p class="error">@Error</p>
     }
-    else if (Build is null)
-    {
-        <p>Loading talents…</p>
-    }
-    else
+    else if (Build is not null)
     {
         <div class="summary">
             <div><span class="label">Points spent</span> <b>@Build.PointsSpent</b> / @Build.Class.TotalPoints</div>

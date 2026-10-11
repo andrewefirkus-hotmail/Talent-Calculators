@@ -12,7 +12,10 @@
         @foreach (var talent in Tree.Talents)
         {
             var pre = Build.PrerequisiteOf(talent);
-            if (pre is null) continue;
+            if (pre is null)
+            {
+                continue;
+            }
             var on = Build.IsPrerequisiteMet(talent) ? "on" : "";
             var position = $"--from-row:{pre.Row}; --from-col:{pre.Col}; --to-row:{talent.Row}; --to-col:{talent.Col};";
 

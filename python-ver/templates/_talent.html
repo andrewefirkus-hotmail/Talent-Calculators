@@ -1,0 +1,87 @@
+{#
+    _talent.html: one talent icon with its rank badge and hover tooltip.
+    Included from _tree.html inside a for loop, so "talent" is the current talent
+    and "tree" is the tree it belongs to.
+#}
+{% set rank = build.rank_of(talent) %}
+{#
+    Work out the talent's state, which picks its CSS class (and so its border color).
+    An if / elif / else chain checks the conditions top to bottom and stops at the first true one.
+    In C# this would be:
+        string state;
+        if (rank >= talent.MaxRank) { state = "maxed"; }
+        else if (build.CanAdd(talent)) { state = "available"; }
+        else if (rank > 0) { state = "partial"; }
+        else { state = "locked"; }
+#}
+{% if rank >= talent.max_rank %}{% set state = 'maxed' %}
+{% elif build.can_add(talent) %}{% set state = 'available' %}
+{% elif rank > 0 %}{% set state = 'partial' %}
+{% else %}{% set state = 'locked' %}{% endif %}
+{#
+    The talent itself. The HTMX attributes:
+      hx-post     POST to click_talent in app.py with this talent's id.
+      hx-trigger  fire on a normal click AND on a right-click ("contextmenu").
+      hx-vals     extra form values to send. "js:" means it's evaluated as JavaScript in the browser:
+                  remove is true for a right-click or a shift-click. app.py reads it with
+                  request.form.get("remove") and calls build.remove() instead of build.add().
+      hx-target / hx-swap   replace the whole #content block with the server's answer.
+#}
+<div class="talent {{ state }}"
+     style="{{ talent_style(talent) }}"
+     hx-post="{{ url_for('click_talent', class_slug=class_slug, talent_id=talent.id, **build_query) }}"
+     hx-trigger="click, contextmenu"
+     hx-vals='js:{remove: event.type === "contextmenu" || event.shiftKey}'
+     hx-target="#content" hx-swap="outerHTML">
+
+    <div class="talent-icon" style="{{ talent_icon_style(talent) }}">
+        {#
+            Fallback when there's no icon image: show the first two letters, uppercased.
+            talent.name[:2] is slicing (characters 0 and 1).
+            "| upper" is a Jinja FILTER: the value on the left is passed through the upper filter.
+            Filters are like chaining a method: in C#, talent.Name[..2].ToUpper().
+        #}
+        {% if not talent.icon %}<span class="talent-initials">{{ talent.name[:2] | upper }}</span>{% endif %}
+    </div>
+    <span class="talent-rank">{{ rank }}/{{ talent.max_rank }}</span>
+
+    {# The tooltip opens to the left for the right-hand columns, so it stays on screen. #}
+    <div class="tooltip {{ 'tooltip-left' if talent.col >= 2 else 'tooltip-right' }}">
+        <div class="tooltip-name">{{ talent.name }}</div>
+        <div class="tooltip-rank">Rank {{ rank }}/{{ talent.max_rank }}</div>
+
+        {# "not" is Python's "!". Show the red requirement lines only while they're not met yet. #}
+        {% if not build.is_row_unlocked(talent) %}
+            <div class="tooltip-req">Requires {{ build.points_needed_for_row(talent.row) }} points in {{ tree.name }} Talents</div>
+        {% endif %}
+        {% if not build.is_prerequisite_met(talent) %}
+            {% set needed = build.required_prerequisite_rank(talent) %}
+            {# Pick "point" or "points" depending on the number. #}
+            <div class="tooltip-req">Requires {{ needed }} {{ 'point' if needed == 1 else 'points' }} in {{ build.prerequisite_of(talent).name }}</div>
+        {% endif %}
+
+        {#
+            Describe the current rank. At rank 0 there's nothing learned yet, so show rank 1 instead.
+            [rank, 1] | max builds a list of two numbers and passes it through the max filter,
+            the same as max(rank, 1) in Python or Math.Max(rank, 1) in C#.
+        #}
+        <div class="tooltip-desc">{{ build.describe_rank(talent, [rank, 1] | max) }}</div>
+
+        {#
+            "0 < rank < talent.max_rank" is a CHAINED comparison, a Python feature.
+            It means "0 < rank and rank < talent.max_rank". In C# you'd write (0 < rank && rank < max).
+            So: only show "Next rank" when some points are spent but it isn't maxed.
+        #}
+        {% if 0 < rank < talent.max_rank %}
+            <div class="tooltip-next">Next rank:</div>
+            <div class="tooltip-desc">{{ build.describe_rank(talent, rank + 1) }}</div>
+        {% endif %}
+
+        {% if build.can_add(talent) %}
+            <div class="tooltip-hint learn">Click to learn</div>
+        {% endif %}
+        {% if build.can_remove(talent) %}
+            <div class="tooltip-hint unlearn">Right-click (or shift-click) to unlearn</div>
+        {% endif %}
+    </div>
+</div>

@@ -1,10 +1,15 @@
+# .NET build output and per-user IDE files (both projects)
 bin/
 obj/
 .vs/
 *.user
 
-# Generated from .scss on build
-wwwroot/css/
-*.razor.css
-*.css.map
-/Properties/PublishProfiles/FolderProfile.pubxml
+# Python
+.venv/
+__pycache__/
+.mypy_cache/
+.idea/
+
+# Reference screenshots and old archive at the top level
+/*.png
+/*.zip

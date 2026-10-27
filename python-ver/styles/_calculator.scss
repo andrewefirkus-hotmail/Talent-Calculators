@@ -1,0 +1,57 @@
+@import "variables";
+
+.calculator {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px;
+
+    @media (max-width: $phone) { padding: 8px; }
+}
+
+.calc-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 16px;
+    justify-content: space-between;
+
+    h1 {
+        font-size: 1.6rem;
+        margin: 8px 0 12px;
+        &:focus { outline: none; }
+    }
+}
+
+.class-picker a {
+    color: $muted;
+    margin-left: 12px;
+    text-decoration: none;
+
+    &.active { color: $text; font-weight: 600; }
+}
+
+.summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+    background: $panel;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+
+    .label { color: $muted; margin-right: 4px; }
+    .split { color: $muted; font-family: monospace; font-size: 1rem; }
+}
+
+.reset-all { margin-left: auto; }
+
+.trees {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+
+.help { color: $muted; text-align: center; font-size: 0.9rem; margin-top: 16px; }
+.error { color: $red; }

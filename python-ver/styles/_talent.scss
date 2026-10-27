@@ -1,0 +1,102 @@
+@import "variables";
+
+// --row and --col are set inline from the data.
+.talent {
+    position: absolute;
+    left: calc(#{$grid-padding} + var(--col) * #{$pitch});
+    top: calc(#{$grid-padding} + var(--row) * #{$pitch});
+    width: $icon-size;
+    height: $icon-size;
+    cursor: pointer;
+
+    &:hover {
+        z-index: 10;
+        .tooltip { display: block; }
+        .talent-icon { filter: brightness(1.2); }
+    }
+
+    // State colors: grey when locked, green when it can take points, gold when maxed.
+    &.locked .talent-icon { filter: grayscale(1) brightness(0.65); }
+    &.locked:hover .talent-icon { filter: grayscale(1) brightness(0.8); }
+
+    &.available, &.partial {
+        .talent-icon { border-color: $green; }
+        .talent-rank { color: $green; }
+    }
+
+    &.maxed {
+        .talent-icon { border-color: $gold; }
+        .talent-rank { color: $gold; }
+    }
+}
+
+.talent-icon {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border: 2px solid #555;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.talent-initials {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px #000;
+    letter-spacing: 0.5px;
+}
+
+.talent-rank {
+    position: absolute;
+    right: -10px;
+    bottom: -8px;
+    background: #111;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: $muted;
+}
+
+// ---------- Tooltip ----------
+
+.tooltip {
+    display: none;
+    position: absolute;
+    top: -4px;
+    width: 280px;
+    background: $tooltip-bg;
+    border: 1px solid $tooltip-border;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: $text;
+    cursor: default;
+    pointer-events: none;
+
+    &.tooltip-right { left: calc(100% + 14px); }
+    &.tooltip-left { right: calc(100% + 14px); }
+
+    @media (max-width: $phone) { width: 200px; }
+}
+
+.tooltip-name { font-size: 1rem; font-weight: 600; color: #fff; }
+.tooltip-rank { margin-bottom: 4px; }
+.tooltip-req { color: $red; }
+.tooltip-desc { color: $gold; margin-top: 4px; }
+.tooltip-next { color: #fff; margin-top: 8px; }
+
+.tooltip-hint {
+    margin-top: 8px;
+    font-size: 0.8rem;
+
+    &.learn { color: $green; }
+    &.unlearn { color: $red; }
+    &.learn + &.unlearn { margin-top: 0; }
+}

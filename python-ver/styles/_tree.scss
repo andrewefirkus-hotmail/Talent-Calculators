@@ -1,0 +1,143 @@
+@import "variables";
+
+.tree {
+    background: $panel;
+    border-radius: 6px;
+    padding: 8px;
+    user-select: none;
+}
+
+.tree-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.tree-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid #8a6d2b;
+    background: #3a2a1a center / cover;
+    display: grid;
+    place-items: center;
+    color: $gold;
+}
+
+.tree-points { margin-left: auto; }
+
+// --rows is set inline from the data.
+.tree-grid {
+    position: relative;
+    width: $grid-padding * 2 + ($columns - 1) * $pitch + $icon-size;
+    height: calc(#{$grid-padding * 2 + $icon-size} + (var(--rows) - 1) * #{$pitch});
+    border-radius: 4px;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+.tree-reset {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    font-weight: 600;
+
+    .x { color: $gold; margin-right: 6px; }
+}
+
+// ---------- Prerequisite arrows ----------
+// Each arrow is a bar positioned from --from-row/--from-col/--to-row/--to-col (set inline).
+// Corner arrows (prerequisite in another row and column) are two bars: across, then down.
+
+@function x($col) { @return calc(#{$grid-padding} + #{$col} * #{$pitch}); }
+@function y($row) { @return calc(#{$grid-padding} + #{$row} * #{$pitch}); }
+
+$half: $icon-size * 0.5;
+$bar-half: $arrow-width * 0.5;
+$head-length: $arrow-head * 1.5;
+
+.arrow {
+    position: absolute;
+    background: $arrow-off;
+    pointer-events: none;
+
+    &.on { background: $gold; }
+
+    // The head is a CSS triangle on the end of the bar.
+    &.down, &.right, &.left {
+        &::after {
+            content: "";
+            position: absolute;
+            border: $arrow-head solid transparent;
+        }
+    }
+
+    &.down {
+        width: $arrow-width;
+        left: calc(#{x(var(--to-col))} + #{$half - $bar-half});
+        top: calc(#{y(var(--from-row))} + #{$icon-size});
+        height: calc((var(--to-row) - var(--from-row)) * #{$pitch} - #{$icon-size + $arrow-gap + $head-length});
+
+        &::after {
+            top: 100%;
+            left: $bar-half - $arrow-head;
+            border-width: $head-length $arrow-head 0;
+            border-top-color: $arrow-off;
+        }
+        &.on::after { border-top-color: $gold; }
+    }
+
+    &.right, &.left {
+        height: $arrow-width;
+        top: calc(#{y(var(--from-row))} + #{$half - $bar-half});
+        width: calc(var(--span) * #{$pitch} - #{$icon-size + $arrow-gap + $head-length});
+
+        &::after { top: $bar-half - $arrow-head; }
+    }
+
+    &.right {
+        --span: calc(var(--to-col) - var(--from-col));
+        left: calc(#{x(var(--from-col))} + #{$icon-size});
+
+        &::after {
+            left: 100%;
+            border-width: $arrow-head 0 $arrow-head $head-length;
+            border-left-color: $arrow-off;
+        }
+        &.on::after { border-left-color: $gold; }
+    }
+
+    &.left {
+        --span: calc(var(--from-col) - var(--to-col));
+        left: calc(#{x(var(--to-col))} + #{$icon-size + $arrow-gap + $head-length});
+
+        &::after {
+            right: 100%;
+            border-width: $arrow-head $head-length $arrow-head 0;
+            border-right-color: $arrow-off;
+        }
+        &.on::after { border-right-color: $gold; }
+    }
+
+    // First half of a corner arrow: across from the prerequisite to the target's column.
+    &.across-right, &.across-left {
+        height: $arrow-width;
+        top: calc(#{y(var(--from-row))} + #{$half - $bar-half});
+    }
+    &.across-right {
+        left: calc(#{x(var(--from-col))} + #{$icon-size});
+        width: calc((var(--to-col) - var(--from-col)) * #{$pitch} - #{$half - $bar-half});
+    }
+    &.across-left {
+        left: calc(#{x(var(--to-col))} + #{$half - $bar-half});
+        width: calc((var(--from-col) - var(--to-col)) * #{$pitch} - #{$half - $bar-half});
+    }
+
+    // Second half: down from the corner into the target, reusing .down's head.
+    &.down.corner {
+        top: calc(#{y(var(--from-row))} + #{$half - $bar-half});
+        height: calc((var(--to-row) - var(--from-row)) * #{$pitch} - #{$half - $bar-half + $arrow-gap + $head-length});
+    }
+}

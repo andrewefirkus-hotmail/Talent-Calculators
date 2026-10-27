@@ -1,71 +1,42 @@
-# Talent Calculator (Blazor WebAssembly)
+# Talent Calculators
 
-A homemade Classic WoW-style talent calculator, modeled on Wowhead's Classic Rogue calculator.
-No database and no server code: everything runs in the browser and the talent data is a JSON file.
+A Classic WoW talent calculator, written twice.
 
-## Run it
-
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
-
-```
-dotnet run
-```
-
-Then open the URL it prints (http://localhost:5074 by default). `dotnet watch` gives you hot reload while you tinker.
-
-## How to use
-
-- **Click** a talent to add a point, **right-click** (or shift-click) to remove one.
-- Each row unlocks after 5 points in that tree; arrows show prerequisites, which must be maxed.
-- 51 points total; the header shows points left and the character level the build needs.
-- The build is saved in the address bar (`?build=...`), so you can bookmark or share it.
-
-## Project layout
-
-| Path | What it is |
+| Folder | What it is |
 | --- | --- |
-| `wwwroot/data/rogue.json` | The Rogue talent data. Edit this to fix names, ranks, positions and text. |
-| `wwwroot/data/classes.json` | List of classes. Add an entry plus a `{slug}.json` file to add a class; it appears at `/{slug}`. |
-| `wwwroot/icons/` | Put talent icons here and reference them with `"icon": "icons/name.jpg"`. |
-| `Models/TalentModels.cs` | Shapes of the JSON data. |
-| `Services/TalentBuild.cs` | All the rules (point cap, row unlocking, prerequisites, safe removal, build code). No UI code. |
-| `Components/TalentTree.razor` | One tree: header, grid, prerequisite arrows, reset button. |
-| `Components/TalentNode.razor` | One talent icon with its rank badge and tooltip. |
-| `Pages/Calculator.razor` | The page: loads the data, shows the summary bar and the three trees. |
-| `Styles/_variables.scss` | Shared colors and sizes (icon size, spacing, arrow size). Change the layout here. |
-| `Styles/app.scss` | Global styles. Compiled to `wwwroot/css/app.css` on build. |
-| `Components/*.razor.scss`, `Pages/*.razor.scss` | Each component's own styles, scoped to that component by Blazor. |
+| `TalentCalculator/` | The .NET version: a Blazor WebAssembly app. Its own README covers running it and how the code is laid out. |
+| `TalentCalculator.Launcher/` | A tiny ASP.NET Core server that hosts the Blazor app on http://localhost:5080 and opens the browser. This is the project you publish into an .exe. |
+| `python-ver/` | The Python version (Flask + HTMX). See its README for setup. |
 
-## Talent data format
+## Publishing the .NET version
 
-```json
-{
-  "id": "lethality",              // unique within the class
-  "name": "Lethality",
-  "row": 2, "col": 2,             // 0-based; 4 columns, row N needs N*5 points in the tree
-  "maxRank": 5,
-  "icon": "icons/lethality.jpg",  // optional; initials on a colored tile if omitted
-  "requires": { "id": "malice" }, // optional; add "rank": 3 if it doesn't need the max rank
-  "description": "Increases crit damage by {6|12|18|24|30}%."   // {a|b|c} = value per rank
-}
+There are two publish profiles in `TalentCalculator.Launcher/Properties/PublishProfiles`.
+Both are Release, self-contained and Windows x64, so the PC that runs them doesn't need .NET installed.
+
+| Profile | What you get | Use it for |
+| --- | --- | --- |
+| **FolderProfile** | A folder of files: `TalentCalculator.Launcher.exe` plus the runtime and a `wwwroot` folder. | Checking that a build works. |
+| **SingleFileProfile** | One file: `TalentCalculator.exe` (about 65 MB) with everything packed inside. | Sharing with other people. |
+
+**From Visual Studio:**
+1. Open `TalentCalculator/TalentCalculator.slnx`.
+2. Right-click **TalentCalculator.Launcher** in Solution Explorer and choose **Publish**.
+3. Pick the profile you want and click **Publish**.
+
+**From a terminal** (in this folder):
+
+```
+dotnet publish TalentCalculator.Launcher -p:PublishProfile=FolderProfile
+dotnet publish TalentCalculator.Launcher -p:PublishProfile=SingleFileProfile
 ```
 
-Trees take an optional `"background"` (any CSS background, e.g. `"url('images/assassination.jpg') center/cover"`)
-and an optional `"icon"`.
+**Where the output lands:**
+- FolderProfile: `TalentCalculator.Launcher/bin/Release/net10.0/publish/`. Run `TalentCalculator.Launcher.exe` from there. If you copy it elsewhere, copy the whole folder.
+- SingleFileProfile: `TalentCalculator.Launcher/bin/Release/net10.0/share/TalentCalculator.exe`. That one file is all anyone needs.
+  (The `share-build` folder next to it is a by-product of the build and can be ignored.)
 
-The bundled Rogue data matches the layout and max ranks from the Wowhead screenshots. Most names and
-descriptions are from memory of Classic and a few are placeholders, so treat it as sample data to replace.
+Either way, running the .exe starts a small web server and opens your browser at http://localhost:5080.
+The single .exe unpacks the app into your temp folder (`%TEMP%\TalentCalculator`) on its first run.
 
-## Build code format
-
-Modeled on Wowhead's: `?build=3053-32-5_0Ac1a`. The part before `_` is the build, and the part after is the order the points were learned.
-
-- **Build:** one digit per talent (in the order they appear in the JSON) per tree, trees separated by `-`
-  in JSON order (Assassination-Combat-Subtlety). Trailing zeros are dropped, so taking only the third
-  talent in a tree gives `003`.
-- **Order:** a digit switches to that tree, a lowercase letter is one point in that tree's talent
-  (`a` = first talent in the JSON), and an uppercase letter means the talent was taken from 0 to max in one go.
-  `0Ac1a` = max the first Assassination talent, one point in its third, then one point in Combat's first.
-
-When a link loads, the order is replayed if it is valid and matches the build; otherwise the build digits are
-used on their own. Reordering talents in the JSON changes what old codes mean.
+Windows SmartScreen may warn about the single .exe the first time someone runs it, because it isn't code-signed.
+They can click **More info**, then **Run anyway**.

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+{#
+    calculator.html: the full page, sent on the first visit and when switching class.
+    After that, clicks only replace the #content block (see _content.html).
+    app.py's calculator() route renders this with build, class_slug and classes.
+#}
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ build.class_data.name }} Talent Calculator</title>
+    {# url_for('static', filename=...) builds a URL to a file in the static folder, e.g. /static/css/site.css. #}
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon-192.png') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}" />
+    <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+</head>
+{# hx-boost turns the class links into background requests, so the old class stays visible until the new one is ready. #}
+<body hx-boost="true">
+    <div class="calculator">
+        <header class="calc-header">
+            <h1><span style="{{ class_name_style(build.class_data) }}">{{ build.class_data.name }}</span> Talent Calculator</h1>
+            {#
+                "classes|length" passes the list through the length filter, like classes.Count in C#
+                (or len(classes) in plain Python). Only show the picker when there's more than one class.
+            #}
+            {% if classes|length > 1 %}
+            <nav class="class-picker">
+                {#
+                    A for loop that makes one link per class.
+                    class_entry is a dictionary loaded from classes.json. Jinja lets you write
+                    class_entry.slug instead of Python's class_entry["slug"].
+                    The link for the class you're on gets the "active" CSS class.
+                #}
+                {% for class_entry in classes %}
+                <a href="{{ url_for('calculator', class_slug=class_entry.slug) }}"
+                   class="{{ 'active' if class_entry.slug == class_slug else '' }}">{{ class_entry.name }}</a>
+                {% endfor %}
+            </nav>
+            {% endif %}
+        </header>
+
+        {# Paste in the part that changes on every click. #}
+        {% include "_content.html" %}
+
+        <p class="help">
+            Click a talent to add a point. Right-click or shift-click to remove one.
+            The address bar keeps your build, so you can bookmark or share it.
+        </p>
+    </div>
+
+    <script>
+        // Right-click on a talent removes a point (handled by htmx), so don't show the browser menu there.
+        document.addEventListener("contextmenu", contextEvent => {
+            if (contextEvent.target.closest(".talent")) {
+                contextEvent.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

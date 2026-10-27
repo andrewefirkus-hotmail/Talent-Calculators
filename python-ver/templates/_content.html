@@ -1,0 +1,74 @@
+{#
+    _content.html: everything that changes when a point is spent.
+    Each click swaps this whole block (the <div id="content">) for a fresh copy from the server.
+
+    JINJA BASICS (for all the templates):
+      {{ something }}   prints a value into the HTML (like @something in Razor).
+      {% something %}   runs logic but prints nothing: if, for, set, include.
+      {-# ... #-}       a comment (written here without the dashes). It's removed on the server,
+                        so the browser never sees it. A comment can't mention its own end marker,
+                        or the comment would stop early, which is why the dashes are there.
+    Variables like "build" and "class_slug" come from render_template(...) in app.py,
+    which passes them in as keyword arguments: render_template("_content.html", build=build, ...).
+#}
+
+{#
+    {% set %} creates a variable, like "var buildQuery = ..." in C#.
+    This one is a one-line conditional expression (Python's ternary):
+        VALUE_IF_TRUE  if CONDITION  else  VALUE_IF_FALSE
+    In C#:  var buildQuery = code != "" ? new { build = code } : new { };
+    An empty string counts as "false" in Python/Jinja, so "if build.to_code()" means
+    "if there is any build code at all". With no points spent we pass no ?build= in the URLs.
+    {'build': ...} is a dictionary (like Dictionary<string, string> in C#).
+#}
+{% set build_query = {'build': build.to_code()} if build.to_code() else {} %}
+<div id="content">
+    <div class="summary">
+        {# build.points_spent is a @property in talent_build.py, so no () is needed. #}
+        <div><span class="label">Points spent</span> <b>{{ build.points_spent }}</b> / {{ build.class_data.total_points }}</div>
+        <div><span class="label">Remaining</span> <b>{{ build.points_remaining }}</b></div>
+        {# Show the level, or a dash when it's 0. 0 counts as false, so the "else" branch runs. #}
+        <div><span class="label">Required level</span> <b>{{ build.required_level if build.required_level else '–' }}</b></div>
+        {#
+            A for loop over the 3 trees, printing e.g. "31 / 20 / 0".
+            Inside any Jinja for loop there's a special "loop" variable:
+              loop.index0  the position, counting from 0
+              loop.index   the position, counting from 1
+              loop.first / loop.last  true on the first / last pass
+            "' / ' if not loop.last" prints the separator on every pass except the last.
+            Notice there's no "else" here: in Jinja, a missing else just prints nothing.
+            (Plain Python requires the else.)
+        #}
+        <div class="split">{% for tree in build.class_data.trees %}{{ build.points_in(tree) }}{{ ' / ' if not loop.last }}{% endfor %}</div>
+        {#
+            HTMX attributes (the hx-* ones) are what make the page interactive without our own JavaScript:
+              hx-post    on click, send a POST request to this URL
+              hx-target  which element to replace with the HTML the server sends back
+              hx-swap    "outerHTML" replaces the element itself, not just its insides
+            url_for('reset_all', ...) builds the URL for the Python function named reset_all in app.py.
+            **build_query "unpacks" the dictionary into keyword arguments, so
+            url_for('reset_all', class_slug='rogue', **{'build': 'x'}) is the same as
+            url_for('reset_all', class_slug='rogue', build='x'). Extra arguments become ?query=values.
+            The last line prints the word "disabled" only when no points are spent.
+        #}
+        <button class="button reset-all"
+                hx-post="{{ url_for('reset_all', class_slug=class_slug, **build_query) }}"
+                hx-target="#content" hx-swap="outerHTML"
+                {{ 'disabled' if build.points_spent == 0 }}>Reset all</button>
+    </div>
+
+    <div class="trees">
+        {#
+            Loop over the trees and draw each one with _tree.html.
+            {% include %} pastes another template in here, and it can see all our variables
+            (build, class_slug, build_query, tree...). It works much like a Blazor child component,
+            except nothing is passed explicitly: the included file just shares our variables.
+            "loop" does NOT carry over into an included file, so we copy loop.index0 into
+            tree_index first. _tree.html needs it for its reset button URL.
+        #}
+        {% for tree in build.class_data.trees %}
+            {% set tree_index = loop.index0 %}
+            {% include "_tree.html" %}
+        {% endfor %}
+    </div>
+</div>

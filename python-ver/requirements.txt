@@ -1,0 +1,4 @@
+flask>=3.0
+libsass>=0.23  # only needed to rebuild the CSS (build_css.py)
+beartype>=0.23.1  # checks type hints while the app runs
+mypy>=2.4.0  # checks type hints before running:  python -m mypy

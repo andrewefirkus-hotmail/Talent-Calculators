@@ -1,0 +1,66 @@
+{#
+    _tree.html: one talent tree. Its header, a grid of talents with prerequisite arrows, and a reset button.
+    It's included from _content.html inside a for loop, so "tree" is the current tree
+    and "tree_index" is its position (0, 1 or 2).
+#}
+<div class="tree">
+    <div class="tree-header">
+        {#
+            tree_icon_style(tree) is a Python function in app.py marked @app.template_global(),
+            which makes it callable from any template. It returns the CSS text.
+            tree.name[:1] is slicing: the first character of the name ("Assassination" becomes "A").
+            We only show that letter when there's no icon image.
+        #}
+        <div class="tree-icon" style="{{ tree_icon_style(tree) }}">{{ '' if tree.icon else tree.name[:1] }}</div>
+        <span class="tree-name">{{ tree.name }}</span>
+        <span class="tree-points">{{ build.points_in(tree) }} / {{ build.class_data.total_points }}</span>
+    </div>
+
+    <div class="tree-grid" style="{{ tree_grid_style(tree) }}">
+        {#
+            FIRST LOOP: draw the arrows. They go first so the talent icons are drawn on top of them.
+            For each talent we ask "does this talent need another talent first?"
+        #}
+        {% for talent in tree.talents %}
+            {% set prerequisite = build.prerequisite_of(talent) %}
+            {#
+                prerequisite_of returns None when there isn't one, and None counts as false.
+                So "if prerequisite" means "if this talent has a prerequisite" (in C#: if (prerequisite != null)).
+            #}
+            {% if prerequisite %}
+                {# The arrow lights up (class "on") once the prerequisite has enough points. #}
+                {% set on = 'on' if build.is_prerequisite_met(talent) else '' %}
+                {% set position = arrow_style(prerequisite, talent) %}
+                {#
+                    if / elif / else picks which kind of arrow to draw.
+                    "elif" is Python's "else if". Only the first branch whose condition is true runs.
+                      Same column     -> a straight arrow pointing down.
+                      Same row        -> a sideways arrow, left or right.
+                      Anything else   -> two pieces: across, then down (an L shape).
+                #}
+                {% if prerequisite.col == talent.col %}
+                    <div class="arrow down {{ on }}" style="{{ position }}"></div>
+                {% elif prerequisite.row == talent.row %}
+                    <div class="arrow {{ 'right' if talent.col > prerequisite.col else 'left' }} {{ on }}" style="{{ position }}"></div>
+                {% else %}
+                    <div class="arrow {{ 'across-right' if talent.col > prerequisite.col else 'across-left' }} {{ on }}" style="{{ position }}"></div>
+                    <div class="arrow down corner {{ on }}" style="{{ position }}"></div>
+                {% endif %}
+                {# Every {% if %} and {% for %} must be closed with {% endif %} / {% endfor %}. Jinja has no braces or indentation rules. #}
+            {% endif %}
+        {% endfor %}
+
+        {# SECOND LOOP: draw each talent with _talent.html, which sees "talent" from this loop. #}
+        {% for talent in tree.talents %}
+            {% include "_talent.html" %}
+        {% endfor %}
+    </div>
+
+    {# Reset just this tree. tree_index was set in _content.html right before including us. #}
+    <button class="button tree-reset"
+            hx-post="{{ url_for('reset_tree', class_slug=class_slug, tree_index=tree_index, **build_query) }}"
+            hx-target="#content" hx-swap="outerHTML"
+            {{ 'disabled' if build.points_in(tree) == 0 }}>
+        <span class="x">✕</span> Reset
+    </button>
+</div>

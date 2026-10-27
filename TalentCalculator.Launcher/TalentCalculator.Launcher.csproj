@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TalentCalculator\TalentCalculator.csproj" />
+  </ItemGroup>
+
+  <!--
+    Share build only (SingleFileProfile sets EmbedWebRoot=true):
+    1. Publish the Blazor app on its own into TalentCalculator\obj\share-publish\.
+    2. Zip that publish folder (wwwroot plus the manifest that maps URLs to files).
+    3. Embed the zip in the .exe as "blazor-app.zip". Program.cs unzips it at startup.
+  -->
+  <Target Name="EmbedBlazorWebRoot" BeforeTargets="PrepareForBuild" Condition="'$(EmbedWebRoot)' == 'true'">
+    <PropertyGroup>
+      <!-- Kept in the Blazor project's own obj folder, so this project doesn't pick the files up as content. -->
+      <BlazorPublishDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\TalentCalculator\obj\share-publish\'))</BlazorPublishDir>
+      <WebRootZip>$([System.IO.Path]::GetFullPath('$(BaseIntermediateOutputPath)blazor-app.zip'))</WebRootZip>
+    </PropertyGroup>
+    <RemoveDir Directories="$(BlazorPublishDir)" />
+    <MSBuild Projects="..\TalentCalculator\TalentCalculator.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);PublishDir=$(BlazorPublishDir)"
+             RemoveProperties="RuntimeIdentifier;SelfContained;PublishSingleFile;IncludeNativeLibrariesForSelfExtract;EnableCompressionInSingleFile;EmbedWebRoot;_IsPublishing" />
+    <ZipDirectory SourceDirectory="$(BlazorPublishDir)" DestinationFile="$(WebRootZip)" Overwrite="true" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(WebRootZip)" LogicalName="blazor-app.zip" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Share build only: copy just the finished .exe into bin\Release\net10.0\share\. -->
+  <Target Name="CopyShareExe" AfterTargets="Publish" Condition="'$(EmbedWebRoot)' == 'true'">
+    <ItemGroup>
+      <ShareExe Include="$(PublishDir)$(AssemblyName)$(_NativeExecutableExtension)" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ShareExe)" DestinationFiles="$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)\share\TalentCalculator$(_NativeExecutableExtension)" />
+  </Target>
+
+</Project>

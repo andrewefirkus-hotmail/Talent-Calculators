@@ -1,0 +1,7 @@
+// Everything compiles into static/css/site.css. Run:  python build_css.py
+// Same files as the Blazor version; there each one was scoped to its component.
+@import "variables";
+@import "global";
+@import "calculator";
+@import "tree";
+@import "talent";

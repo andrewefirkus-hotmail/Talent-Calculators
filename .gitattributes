@@ -1,0 +1,4 @@
+# GitHub labels a repo by its largest language. Leave the Python version and the
+# Python extraction tools out of that count, so the repo shows as the .NET (C#) project.
+python-ver/** linguist-vendored
+TalentCalculator/tools/** linguist-vendored

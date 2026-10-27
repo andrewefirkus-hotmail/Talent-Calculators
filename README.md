@@ -40,3 +40,11 @@ The single .exe unpacks the app into your temp folder (`%TEMP%\TalentCalculator`
 
 Windows SmartScreen may warn about the single .exe the first time someone runs it, because it isn't code-signed.
 They can click **More info**, then **Run anyway**.
+
+## Publishing to GitHub Pages
+
+`.github/workflows/deploy-pages.yml` builds only the Blazor project and publishes it to
+https://andrewefirkus-hotmail.github.io/Talent-Calculators/ on every push to `main` that changes `TalentCalculator/`.
+Python-only changes don't trigger it. You can also run it by hand from the Actions tab ("Run workflow").
+
+One-time setup: on GitHub, go to Settings > Pages > Build and deployment, and set Source to **GitHub Actions**.

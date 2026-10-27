@@ -1,0 +1,77 @@
+# Publishes the Blazor version (TalentCalculator) to GitHub Pages:
+#   https://andrewefirkus-hotmail.github.io/Talent-Calculators/
+# Only the .NET project is built here. The Python version (python-ver) is not deployed.
+#
+# One-time setup on GitHub: Settings > Pages > Build and deployment > Source: GitHub Actions.
+
+name: Deploy Blazor app to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # Python-only changes don't trigger a redeploy.
+    paths:
+      - "TalentCalculator/**"
+      - ".github/workflows/deploy-pages.yml"
+  # Adds a "Run workflow" button on the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Don't let two deployments overlap.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish the Blazor app
+        run: dotnet publish TalentCalculator/TalentCalculator.csproj -c Release -o publish
+
+      - name: Adjust for GitHub Pages
+        working-directory: publish/wwwroot
+        run: |
+          # The site lives under /Talent-Calculators/, not at the root.
+          sed -i 's|<base href="/" />|<base href="/Talent-Calculators/" />|' index.html
+          grep -q '<base href="/Talent-Calculators/" />' index.html
+          # The launcher maps blazor.webassembly.js to the real file name on the fly; Pages can't,
+          # so point index.html straight at the published (fingerprinted) file.
+          blazor_script=$(cd _framework && ls blazor.webassembly.*.js | head -n 1)
+          sed -i "s|_framework/blazor.webassembly.js|_framework/$blazor_script|" index.html
+          grep -q "_framework/$blazor_script" index.html
+          # Unknown URLs like /Talent-Calculators/rogue get 404.html, which then starts the app.
+          cp index.html 404.html
+          # Stop GitHub Pages from hiding the _framework folder.
+          touch .nojekyll
+
+      - name: Set up GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
